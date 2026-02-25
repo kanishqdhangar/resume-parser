@@ -229,8 +229,7 @@ LLM_PROVIDER
 
 ## Author
 
-Kanishq Dhangar
-Final-Year Computer Science Student
+Kanishq Dhangar  
 Full-Stack + AI Developer
 
 ---
