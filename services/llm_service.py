@@ -1,6 +1,8 @@
 import httpx
 import json
+from fastapi import HTTPException
 import re
+import asyncio
 from core.config import settings
 
 
@@ -78,9 +80,36 @@ Resume:
     }
 
     async with httpx.AsyncClient(timeout=30.0) as client:
-        response = await client.post(url, headers=headers, json=data)
+      response = await client.post(url, headers=headers, json=data)
 
-    response.raise_for_status()
+    try:
+        response.raise_for_status()
+    except httpx.HTTPStatusError as e:
+
+        if e.response.status_code == 429:
+            raise HTTPException(
+                status_code=503,
+                detail="LLM rate limit exceeded. Please try again later."
+            )
+
+        elif e.response.status_code == 401:
+            raise HTTPException(
+                status_code=401,
+                detail="Invalid Gemini API key."
+            )
+
+        elif e.response.status_code == 400:
+            raise HTTPException(
+                status_code=400,
+                detail="Bad request sent to Gemini API."
+            )
+
+        else:
+            raise HTTPException(
+                status_code=500,
+                detail="Unexpected error from LLM service."
+            )
+
     result = response.json()
 
     raw_text = result["candidates"][0]["content"]["parts"][0]["text"]
@@ -88,7 +117,10 @@ Resume:
     json_match = re.search(r"\{[\s\S]*\}", raw_text)
 
     if not json_match:
-        raise Exception("Gemini did not return valid JSON")
+        raise HTTPException(
+            status_code=500,
+            detail="Gemini did not return valid JSON."
+        )
 
     clean_json = json_match.group(0)
 
