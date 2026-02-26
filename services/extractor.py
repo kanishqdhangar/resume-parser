@@ -32,10 +32,16 @@ async def extract_text(file_bytes: bytes, extension: str):
         return text, links
 
     elif extension == "docx":
-
         document = Document(io.BytesIO(file_bytes))
         text = "\n".join([para.text for para in document.paragraphs])
 
-        return text, []
+        links = []
+
+        # 🔥 Extract hyperlinks from relationships
+        for rel in document.part.rels.values():
+            if "hyperlink" in rel.reltype:
+                links.append(rel.target_ref)
+
+        return text, links
 
     return "", []
