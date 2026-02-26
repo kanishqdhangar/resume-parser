@@ -1,56 +1,63 @@
-def normalize(text):
-    return (
-        text.lower()
-        .replace(" ", "")
-        .replace("&", "")
-        .replace("-", "")
-        .replace(".", "")
-        .strip()
-    )
+# import re
 
+# def normalize(text):
+#     return re.sub(r'[^a-z0-9]', '', text.lower())
 
-def attach_links_by_position(parsed_data, links, project_positions):
+# def attach_links_by_position(parsed_data, links, lines):
 
-    projects = parsed_data.get("projects", [])
+#     projects = parsed_data.get("projects", [])
+#     if not projects or not lines:
+#         return parsed_data
 
-    # Map normalized title -> (project object, y position)
-    pdf_projects = {
-        normalize(p["title"]): p["y"]
-        for p in project_positions
-    }
+#     # Step 1: Build anchor positions using LLM project titles
+#     anchors = []
 
-    # Create mapping for quick lookup
-    llm_projects = {
-        normalize(p.get("title", "")): p
-        for p in projects
-    }
+#     for project in projects:
+#         title = project.get("title", "")
+#         title_tokens = title.lower().split()
 
-    print("PDF Titles:", pdf_projects.keys())
-    print("LLM Titles:", llm_projects.keys())
+#         for line in lines:
+#             line_text = line["text"].lower()
 
-    # 🔥 KEY FIX: strict Y-alignment instead of closest-above logic
-    for link in links:
-        url = link["url"]
-        link_y = link["y"]
+#             # Match if all title words exist in the line
+#             if all(token in line_text for token in title_tokens):
+#                 anchors.append({
+#                     "project": project,
+#                     "y_top": line["y_top"],
+#                     "y_bottom": line["y_bottom"]
+#                 })
+#                 break
 
-        if not url.lower().startswith("http"):
-            continue
+#     if not anchors:
+#         return parsed_data
 
-        for pdf_title_norm, pdf_y in pdf_projects.items():
+#     # Step 2: Sort anchors vertically
+#     anchors = sorted(anchors, key=lambda x: x["y_top"])
 
-            # Only match if Y distance is small (same line)
-            if abs(link_y - pdf_y) < 15:  # adjust threshold if needed
+#     # Step 3: Build vertical sections
+#     for i in range(len(anchors)):
+#         if i < len(anchors) - 1:
+#             anchors[i]["section_bottom"] = anchors[i + 1]["y_top"]
+#         else:
+#             anchors[i]["section_bottom"] = float("inf")
 
-                # Find matching LLM project
-                for llm_title_norm, project in llm_projects.items():
-                    if (
-                        llm_title_norm in pdf_title_norm
-                        or pdf_title_norm in llm_title_norm
-                    ):
+#     # Step 4: Assign links inside each section
+#     for link in links:
+#         url = link["url"]
+#         link_y = link["y"]
 
-                        if "github.com" in url.lower():
-                            project["github_url"] = url
-                        else:
-                            project["live_url"] = url
+#         if not url.lower().startswith("http"):
+#             continue
 
-    return parsed_data
+#         for anchor in anchors:
+#             if anchor["y_top"] <= link_y <= anchor["section_bottom"]:
+#                 project = anchor["project"]
+
+#                 if "github.com" in url.lower():
+#                     project["github_url"] = url
+#                 else:
+#                     project["live_url"] = url
+
+#                 break
+
+#     return parsed_data

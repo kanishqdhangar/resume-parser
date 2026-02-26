@@ -1,7 +1,6 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException
 from services.extractor import extract_text
 from services.parser_service import parse_resume
-from services.post_processor import attach_links_by_position
 from utils.file_validator import validate_file
 from schemas.resume_schema import ResumeResponse
 
@@ -14,19 +13,17 @@ async def parse_resume_api(file: UploadFile = File(...)):
     extension = validate_file(file)
     file_bytes = await file.read()
 
-    # 🔥 Now returns 3 values
-    text, links, project_positions = await extract_text(file_bytes, extension)
+    text, links = await extract_text(file_bytes, extension)
 
     if not text.strip():
         raise HTTPException(status_code=400, detail="Could not extract text.")
 
-    parsed_data = await parse_resume(text)
+    # 🔥 Inject hyperlinks into text for Gemini
+    if links:
+        text += "\n\nHYPERLINKS FOUND IN RESUME:\n"
+        for url in links:
+            text += f"- {url}\n"
 
-    # 🔥 Use position-based mapping
-    parsed_data = attach_links_by_position(
-        parsed_data,
-        links,
-        project_positions
-    )
+    parsed_data = await parse_resume(text)
 
     return parsed_data

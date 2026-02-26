@@ -21,6 +21,12 @@ IMPORTANT:
 - Return ONLY valid JSON.
 - Do NOT add explanations.
 - Do NOT wrap in markdown.
+- Extract REAL URLs only.
+- The resume may contain a section titled "HYPERLINKS FOUND IN RESUME".
+- Use those URLs to correctly assign github_url and live_url
+  to the appropriate projects.
+- Do NOT return placeholder text like "GitHub Link".
+- If a project has a GitHub link in resume, assign it properly.
 - If a field is not found, return null.
 - Do NOT guess missing values.
 - Field names must match EXACTLY as shown below.
