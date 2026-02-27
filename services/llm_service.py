@@ -6,9 +6,19 @@ import asyncio
 from core.config import settings
 
 
-async def extract_structured_data(text: str):
+# 🔒 Limit concurrent Gemini calls (safe for Render)
+LLM_SEMAPHORE = asyncio.Semaphore(3)
 
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={settings.GEMINI_API_KEY}"
+# ♻️ Reuse single client (better performance)
+CLIENT = httpx.AsyncClient(timeout=30.0)
+
+# 🔑 Multi-key support (Primary + Backup)
+GEMINI_KEYS = [
+    settings.GEMINI_API_KEY,
+    getattr(settings, "GEMINI_API_KEY_BACKUP", None)
+]
+
+async def extract_structured_data(text: str):
 
     headers = {
         "Content-Type": "application/json",
@@ -85,40 +95,59 @@ Resume:
         ]
     }
 
-    async with httpx.AsyncClient(timeout=30.0) as client:
-      response = await client.post(url, headers=headers, json=data)
+    retries = 3
+    base_delay = 1
+
+    async with LLM_SEMAPHORE:
+
+        for api_key in GEMINI_KEYS:
+
+            if not api_key:
+                continue
+
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
+
+            delay = base_delay
+
+            for attempt in range(retries):
+
+                try:
+                    response = await CLIENT.post(url, headers=headers, json=data)
+
+                    # Retry on rate limit
+                    if response.status_code == 429:
+                        if attempt == retries - 1:
+                            break
+                        await asyncio.sleep(delay)
+                        delay *= 2
+                        continue
+
+                    response.raise_for_status()
+                    result = response.json()
+                    return parse_llm_response(result)
+
+                except httpx.RequestError:
+                    if attempt == retries - 1:
+                        break
+                    await asyncio.sleep(delay)
+                    delay *= 2
+
+        # If we reach here → all keys failed
+        raise HTTPException(
+            status_code=503,
+            detail="LLM temporarily unavailable. Please try again later."
+        )
+
+
+def parse_llm_response(result: dict):
 
     try:
-        response.raise_for_status()
-    except httpx.HTTPStatusError as e:
-
-        if e.response.status_code == 429:
-            raise HTTPException(
-                status_code=503,
-                detail="LLM rate limit exceeded. Please try again later."
-            )
-
-        elif e.response.status_code == 401:
-            raise HTTPException(
-                status_code=401,
-                detail="Invalid Gemini API key."
-            )
-
-        elif e.response.status_code == 400:
-            raise HTTPException(
-                status_code=400,
-                detail="Bad request sent to Gemini API."
-            )
-
-        else:
-            raise HTTPException(
-                status_code=500,
-                detail="Unexpected error from LLM service."
-            )
-
-    result = response.json()
-
-    raw_text = result["candidates"][0]["content"]["parts"][0]["text"]
+        raw_text = result["candidates"][0]["content"]["parts"][0]["text"]
+    except (KeyError, IndexError):
+        raise HTTPException(
+            status_code=500,
+            detail="Unexpected LLM response format."
+        )
 
     json_match = re.search(r"\{[\s\S]*\}", raw_text)
 
