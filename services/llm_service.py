@@ -40,6 +40,7 @@ IMPORTANT:
 - If a field is not found, return null.
 - Do NOT guess missing values.
 - Field names must match EXACTLY as shown below.
+- Always return the completing year of education. If currently pursuing, use the current year.
 
 Format:
 
