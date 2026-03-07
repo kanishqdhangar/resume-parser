@@ -41,6 +41,8 @@ IMPORTANT:
 - Do NOT guess missing values.
 - Field names must match EXACTLY as shown below.
 - Always return the completing year of education. If currently pursuing, use the current year.
+- Always return total_experience_years as float like if 4 years and 6 months → 4.5
+- Always return degree in full form like "Bachelor of Technology", "Master of Science", "Doctor of Philosophy", etc.
 
 Format:
 
