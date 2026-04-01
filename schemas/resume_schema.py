@@ -40,3 +40,7 @@ class ResumeResponse(BaseModel):
     work_experience: Optional[List[WorkExperience]] = []
     projects: Optional[List[Projects]] = []
     total_experience_years: Optional[float] = None
+
+class TaskResponse(BaseModel):
+    task_id: str
+    status: str
