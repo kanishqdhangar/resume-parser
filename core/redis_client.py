@@ -1,8 +1,7 @@
 import redis
+import os
 
-redis_client = redis.Redis(
-    host="redis",  # use the service name defined in docker-compose.yml
-    port=6379,
-    db=1,  # use different DB for cache
+redis_client = redis.from_url(
+    os.getenv("REDIS_URL"),
     decode_responses=True
 )
