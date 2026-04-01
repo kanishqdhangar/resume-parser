@@ -226,7 +226,6 @@ docker-compose up --scale worker=3
 ```
 git clone https://github.com/YOUR_USERNAME/resume-parser.git
 cd resume-parser
-git checkout v2-render
 ```
 
 ---
