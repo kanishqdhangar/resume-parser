@@ -1,3 +1,5 @@
+import ssl
+
 from celery import Celery
 import os
 
@@ -18,11 +20,11 @@ celery_app.conf.update(
 )
 
 celery_app.conf.broker_use_ssl = {
-    "ssl_cert_reqs": "CERT_NONE"
+    "ssl_cert_reqs": ssl.CERT_NONE
 }
 
 celery_app.conf.redis_backend_use_ssl = {
-    "ssl_cert_reqs": "CERT_NONE"
+    "ssl_cert_reqs": ssl.CERT_NONE
 }
 
 import tasks
