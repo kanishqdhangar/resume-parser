@@ -1,12 +1,12 @@
 # Resume Parser Microservice
 
-Live Deployment:  
+🌐 **Live Deployment:**  
 https://resume-parser-sgtj.onrender.com/
 
-Swagger API Docs:  
+📄 **Swagger API Docs:**  
 https://resume-parser-sgtj.onrender.com/docs
 
-Health Check:  
+🏥 **Health Check:**  
 https://resume-parser-sgtj.onrender.com/
 
 ---
@@ -15,28 +15,44 @@ https://resume-parser-sgtj.onrender.com/
 
 Resume Parser Microservice is a production-ready AI-powered backend service that extracts structured data from resumes (PDF and DOCX).
 
-It supports:
+It is designed with a scalable asynchronous architecture using FastAPI, Celery, and Redis to efficiently handle concurrent requests and heavy processing workloads.
 
-- Text-based PDFs
-- Scanned PDFs (OCR)
-- Embedded hyperlinks (GitHub, Live URLs, Streamlit, Vercel, etc.)
-- Strict structured JSON output
+The system supports:
 
-The system is optimized for startup-scale traffic and deployed publicly on Render.
+- Text-based PDFs  
+- Scanned PDFs (OCR)  
+- Embedded hyperlinks (GitHub, Live URLs, Streamlit, Vercel, etc.)  
+- Strict structured JSON output  
+- Background processing for heavy tasks  
+
+---
+
+## Architecture
+
+```
+Client → FastAPI → Redis Queue → Celery Worker → LLM/OCR → Redis Cache → Response
+```
+
+- FastAPI handles incoming API requests (non-blocking)
+- Celery processes resume parsing asynchronously
+- Redis acts as both queue (broker) and caching layer
+- Results are returned via task polling
 
 ---
 
 ## Tech Stack
 
-- FastAPI
-- Gemini 2.5 Flash
-- Tesseract OCR
-- pdfplumber
-- PyMuPDF (fitz)
-- httpx (async client)
-- Pydantic
-- Docker
-- Render
+- FastAPI  
+- Celery + Redis  
+- Gemini 2.5 Flash  
+- Tesseract OCR  
+- pdfplumber  
+- PyMuPDF (fitz)  
+- httpx (async client)  
+- Pydantic  
+- Docker  
+- Docker Compose  
+- Render  
 
 ---
 
@@ -44,70 +60,71 @@ The system is optimized for startup-scale traffic and deployed publicly on Rende
 
 This service includes:
 
-- Async Gemini requests using httpx
-- Shared HTTP client for better performance
-- Concurrency limiter using asyncio.Semaphore
-- Exponential backoff retry on rate limits
-- Multi-key Gemini failover (primary + backup key)
-- Resume SHA-256 hash caching to prevent duplicate LLM calls
-- File size validation
-- Strict JSON validation using Pydantic
-- Automatic hyperlink extraction and injection into LLM prompt
+- Async Gemini requests using httpx  
+- Shared HTTP client for better performance  
+- Background processing using Celery  
+- Redis-based caching (SHA-256 hash)  
+- Concurrency limiter using asyncio.Semaphore  
+- Exponential backoff retry on rate limits  
+- Multi-key Gemini failover (primary + backup key)  
+- File size validation  
+- Strict JSON validation using Pydantic  
+- Automatic hyperlink extraction and injection into LLM prompt  
 
-Designed for stable startup usage (~100 resumes/day).
+Designed for stable startup-scale usage (~100+ resumes/day).
 
 ---
 
 ## Features
 
-- Upload PDF or DOCX resumes
-- OCR support for scanned resumes
-- Hyperlink extraction from resumes
-- AI-powered structured parsing
-- Auto-assignment of GitHub and live URLs to projects
-- Strict schema validation
-- Dockerized deployment
-- Public live deployment available
+- Upload PDF or DOCX resumes  
+- OCR support for scanned resumes  
+- Hyperlink extraction from resumes  
+- AI-powered structured parsing  
+- Auto-assignment of GitHub and live URLs to projects  
+- Strict schema validation  
+- Background job processing  
+- Dockerized deployment  
+- Public live deployment available  
 
 ---
 
 ## Extracted Fields
 
-The API extracts:
-
-- name
-- email
-- phone
-- gender
-- about
-- linkedin_url
-- github_url
-- portfolio_url
-- skills (list)
+### Basic Info
+- name  
+- email  
+- phone  
+- gender  
+- about  
+- linkedin_url  
+- github_url  
+- portfolio_url  
+- skills  
 
 ### Education
-- degree
-- field_of_study
-- institution
-- year
-- cgpa
+- degree  
+- field_of_study  
+- institution  
+- year  
+- cgpa  
 
 ### Work Experience
-- title
-- organization
-- start_date
-- end_date
-- description (list of bullet points)
+- title  
+- organization  
+- start_date  
+- end_date  
+- description (list of bullet points)  
 
 ### Projects
-- title
-- description
-- technologies (list)
-- github_url
-- live_url
+- title  
+- description  
+- technologies (list)  
+- github_url  
+- live_url  
 
 ### Additional
-- total_experience_years
+- total_experience_years  
 
 ---
 
@@ -123,18 +140,25 @@ https://resume-parser-sgtj.onrender.com/api/resume/parse
 ### How to Test
 
 1. Open Swagger UI  
-   https://resume-parser-sgtj.onrender.com/docs
+   https://resume-parser-sgtj.onrender.com/docs  
 
 2. Select:  
-   POST /api/resume/parse
+   POST /api/resume/parse  
 
-3. Click "Try it out"
+3. Click "Try it out"  
 
-4. Upload a resume (PDF or DOCX)
+4. Upload a resume (PDF or DOCX)  
 
-5. Click Execute
+5. Click Execute  
 
-You will receive structured JSON output.
+You will receive a task_id and status.
+
+---
+
+### Result Endpoint
+
+GET  
+/api/resume/result/{task_id}
 
 ---
 
@@ -145,139 +169,15 @@ You will receive structured JSON output.
   "name": "John Doe",
   "email": "john@example.com",
   "phone": "+91-9876543210",
-  "gender": null,
-  "about": "Full-stack developer with experience in AI integrations.",
-  "linkedin_url": "https://linkedin.com/in/johndoe",
-  "github_url": "https://github.com/johndoe",
-  "portfolio_url": "https://johndoe.dev",
-  "skills": ["Python", "React", "FastAPI"],
-  "education": [
-    {
-      "degree": "B.Tech",
-      "field_of_study": "Computer Science",
-      "institution": "XYZ University",
-      "year": "2024",
-      "cgpa": "8.5"
-    }
-  ],
-  "work_experience": [
-    {
-      "title": "Software Developer Intern",
-      "organization": "ABC Company",
-      "start_date": "June 2023",
-      "end_date": "August 2023",
-      "description": [
-        "Built REST APIs",
-        "Improved UI performance"
-      ]
-    }
-  ],
+  "skills": ["Python", "React"],
   "projects": [
     {
       "title": "AI Resume Analyzer",
-      "description": "Built an AI-based resume scoring system.",
-      "technologies": ["FastAPI", "Gemini"],
-      "github_url": "https://github.com/johndoe/resume-analyzer",
-      "live_url": "https://resume-analyzer.vercel.app"
+      "technologies": ["FastAPI", "Gemini"]
     }
-  ],
-  "total_experience_years": 1.5
+  ]
 }
 ```
-
----
-
-## Project Structure
-
-```
-resume-parser/
-│
-├── main.py
-├── Dockerfile
-├── requirements.txt
-├── .env
-│
-├── core/
-│   └── config.py
-│
-├── routers/
-│   └── resume.py
-│
-├── services/
-│   ├── extractor.py
-│   ├── parser_service.py
-│   ├── llm_service.py
-│   ├── post_processor.py
-│   └── ocr_service.py
-│
-├── schemas/
-│   └── resume_schema.py
-│
-└── utils/
-```
-
----
-
-## Local Development Setup
-
-### 1. Clone Repository
-
-```
-git clone https://github.com/YOUR_USERNAME/resume-parser.git
-cd resume-parser
-```
-
-### 2. Create Virtual Environment
-
-Windows:
-```
-python -m venv venv
-venv\Scripts\activate
-```
-
-Mac/Linux:
-```
-python3 -m venv venv
-source venv/bin/activate
-```
-
-### 3. Install Dependencies
-
-```
-pip install -r requirements.txt
-```
-
-### 4. Install System Dependencies
-
-Mac:
-```
-brew install tesseract poppler
-```
-
-Linux:
-```
-sudo apt-get install tesseract-ocr poppler-utils
-```
-
-Windows:
-Install Tesseract and Poppler manually and add them to PATH.
-
-### 5. Create .env File
-
-```
-GEMINI_API_KEY=your_primary_key
-GEMINI_API_KEY_BACKUP=your_backup_key
-LLM_PROVIDER=gemini
-```
-
-### 6. Run Server
-
-```
-uvicorn main:app --reload
-```
-
-Open:
-http://127.0.0.1:8000/docs
 
 ---
 
@@ -295,8 +195,101 @@ Run container:
 docker run -p 10000:10000 resume-parser
 ```
 
+---
+
+## Docker Compose (Local Multi-Service Setup)
+
+This project includes docker-compose.yml to run all services together:
+
+- FastAPI (API)
+- Celery Worker
+- Redis (queue + cache)
+
+Run full system:
+
+```
+docker-compose up --build
+```
+
+Scale workers:
+
+```
+docker-compose up --scale worker=3
+```
+
+---
+
+## Local Development Setup
+
+### 1. Clone Repository
+
+```
+git clone https://github.com/YOUR_USERNAME/resume-parser.git
+cd resume-parser
+```
+
+---
+
+### 2. Create Virtual Environment
+
+Windows:
+```
+python -m venv venv
+venv\Scripts\activate
+```
+
+Mac/Linux:
+```
+python3 -m venv venv
+source venv/bin/activate
+```
+
+---
+
+### 3. Install Dependencies
+
+```
+pip install -r requirements.txt
+```
+
+---
+
+### 4. Install System Dependencies
+
+Mac:
+```
+brew install tesseract poppler
+```
+
+Linux:
+```
+sudo apt-get install tesseract-ocr poppler-utils
+```
+
+Windows:
+Install Tesseract and Poppler manually and add them to PATH.
+
+---
+
+### 5. Create .env File
+
+```
+GEMINI_API_KEY=your_primary_key
+GEMINI_API_KEY_BACKUP=your_backup_key
+LLM_PROVIDER=gemini
+REDIS_URL=your_redis_url
+```
+
+---
+
+### 6. Run Server
+
+```
+uvicorn main:app --reload
+```
+
 Open:
-http://localhost:10000/docs
+http://127.0.0.1:8000/docs
 
 ---
 
@@ -304,30 +297,37 @@ http://localhost:10000/docs
 
 Hosted on Render using Docker.
 
-Live URL:
-https://resume-parser-sgtj.onrender.com/
+### Notes
 
-Required Environment Variables:
-
-- GEMINI_API_KEY
-- GEMINI_API_KEY_BACKUP (optional but recommended)
-- LLM_PROVIDER
+- Free Render instances sleep after inactivity  
+- First request may take 30–60 seconds  
+- Celery worker runs in same container (free-tier workaround)  
+- Redis is used as external service (Upstash/Render Redis)  
 
 ---
 
-## Production Notes
+## Project Structure
 
-- Free Render instances sleep after inactivity
-- First request may take 30–60 seconds
-- Resume hash caching reduces LLM cost
-- Multi-key fallback handles rate limits
-- Retry with exponential backoff improves stability
-- Designed for startup-scale traffic
+```
+resume-parser/
+│
+├── main.py
+├── celery_app.py
+├── tasks.py
+├── Dockerfile
+├── docker-compose.yml
+├── requirements.txt
+│
+├── core/
+├── routers/
+├── services/
+├── schemas/
+├── utils/
+```
 
 ---
 
 ## Author
 
 Kanishq Dhangar  
-Full-Stack  
-AI Developer
+Full-Stack & AI Developer
